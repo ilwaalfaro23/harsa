@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <!-- Viewport penting agar responsif di HP -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cafe Senja</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#f97316">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <!-- Tailwind & Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; }
+        .menu-card:active { transform: scale(0.98); }
+        /* Hide scrollbar for cleaner app look */
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+    </style>
+</head>
+<body class="pb-20">
+
+    <!-- NAVBAR -->
+    <nav class="bg-orange-500 shadow-md fixed w-full z-50 top-0">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-white"><i class="fas fa-coffee"></i> Cafe Senja</h1>
+            <button onclick="toggleCart()" class="relative bg-white text-orange-600 px-4 py-2 rounded-full shadow hover:bg-gray-100 transition">
+                <i class="fas fa-shopping-cart"></i>
+                <span id="cart-count" class="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">0</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- CONTENT -->
+    <main class="container mx-auto px-4 pt-20 pb-10">
+        <div class="bg-white p-4 rounded-xl shadow-sm mb-6">
+            <h2 class="text-2xl font-bold text-gray-800 " >Mau pesan apa hari ini?</h2>
+            <p class="text-gray-500 text-sm">Menu terbaik siap disajikan untukmu.</p>
+        </div>
+
+        <div id="menu-container" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <!-- Menu items rendered here -->
+        </div>
+    </main>
+
+    <!-- CART MODAL (Full screen on mobile) -->
+    <div id="cart-sidebar" class="fixed inset-0 bg-white z-50 transform translate-x-full transition-transform duration-300 flex flex-col">
+        <div class="p-4 bg-orange-500 text-white flex justify-between items-center shadow-lg">
+            <h3 class="font-bold text-lg">Keranjang</h3>
+            <button onclick="toggleCart()" class="text-white"><i class="fas fa-times text-xl"></i> Tutup</button>
+        </div>
+        
+        <div id="cart-items" class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+            <!-- Items -->
+        </div>
+
+        <div class="p-4 bg-white border-t shadow-lg">
+            <div class="flex justify-between mb-4 font-bold text-xl text-gray-800">
+                <span>Total:</span>
+                <span id="cart-total">Rp 0</span>
+            </div>
+            
+            <input type="text" id="customer-name" class="w-full border p-3 rounded-lg mb-2 bg-gray-50" placeholder="Nama Pemesan">
+            <input type="text" id="table-number" class="w-full border p-3 rounded-lg mb-4 bg-gray-50" placeholder="Nomor Meja">
+
+            <button onclick="checkout()" class="w-full bg-green-500 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-green-600 active:scale-95 transition">
+                <i class="fab fa-whatsapp"></i> Kirim Pesanan
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // DATA MENU
+        const menuData = [
+            { id: 1, name: "Kopi Susu Gula Aren ", price: 18000, category: "Kopi", img: "https://source.unsplash.com/300x300/?coffee"},
+            { id: 2, name: "Americano", price: 15000, category: "Kopi", img: "https://source.unsplash.com/300x300/?espresso" },
+            { id: 3, name: "Caramel Macchiato", price: 22000, category: "Kopi", img: "https://source.unsplash.com/300x300/?latte" },
+            { id: 4, name: "Nasi Goreng", price: 25000, category: "Makanan", img: "https://source.unsplash.com/300x300/?friedrice" },
+            { id: 5, name: "Mie Goreng", price: 23000, category: "Makanan", img: "https://source.unsplash.com/300x300/?noodles" },
+            { id: 6, name: "Croissant", price: 12000, category: "Snack", img: "https://source.unsplash.com/300x300/?croissant" },
+            { id: 7, name: "Kentang Goreng", price: 12000, category: "Snack", img: "https://source.unsplash.com/300x300/?croissant" },
+
+        ];
+
+        let cart = [];
+
+        function renderMenu() {
+            const container = document.getElementById('menu-container');
+            container.innerHTML = menuData.map(item => `
+                <div class="menu-card bg-white rounded-xl shadow-sm overflow-hidden flex flex-col">
+                    <div class="h-32 bg-gray-200 relative">
+                         <img src="${item.img}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="p-3 flex flex-col flex-1">
+                        <span class="text-[10px] text-orange-500 font-bold uppercase">${item.category}</span>
+                        <h4 class="text-sm font-bold text-gray-800 leading-tight mb-1">${item.name}</h4>
+                        <div class="mt-auto flex justify-between items-center">
+                            <span class="text-xs font-semibold">Rp ${item.price.toLocaleString()}</span>
+                            <button onclick="addToCart(${item.id})" class="bg-orange-100 text-orange-600 w-8 h-8 rounded-full flex items-center justify-center hover:bg-orange-500 hover:text-white transition">
+                                <i class="fas fa-plus text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addToCart(id) {
+            const item = menuData.find(p => p.id === id);
+            const existingItem = cart.find(c => c.id === id);
+            if (existingItem) existingItem.qty++;
+            else cart.push({ ...item, qty: 1 });
+            updateCartUI();
+            // Optional: Auto open cart on mobile for better UX
+            if(window.innerWidth < 768) toggleCart(true); 
+        }
+
+        function removeFromCart(id) {
+            cart = cart.filter(c => c.id !== id);
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            const cartContainer = document.getElementById('cart-items');
+            const cartCount = document.getElementById('cart-count');
+            const cartTotal = document.getElementById('cart-total');
+
+            cartCount.innerText = cart.reduce((sum, item) => sum + item.qty, 0);
+
+            if (cart.length === 0) {
+                cartContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-40 text-gray-400"><i class="fas fa-shopping-basket text-4xl mb-2"></i><p>Keranjang kosong</p></div>';
+            } else {
+                let total = 0;
+                cartContainer.innerHTML = cart.map(item => {
+                    total += item.price * item.qty;
+                    return `
+                    <div class="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
+                        <div class="flex-1">
+                            <h5 class="font-bold text-sm text-gray-800">${item.name}</h5>
+                            <p class="text-xs text-gray-500">${item.qty} x Rp ${item.price.toLocaleString()}</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                             <span class="font-bold text-sm">Rp ${(item.price * item.qty).toLocaleString()}</span>
+                             <button onclick="removeFromCart(${item.id})" class="text-red-500 bg-red-50 p-2 rounded-full"><i class="fas fa-trash text-xs"></i></button>
+                        </div>
+                    </div>`;
+                }).join('');
+                cartTotal.innerText = 'Rp ' + total.toLocaleString();
+            }
+        }
+
+        function toggleCart(forceOpen = false) {
+            const sidebar = document.getElementById('cart-sidebar');
+            if (forceOpen) {
+                sidebar.classList.remove('translate-x-full');
+            } else {
+                sidebar.classList.toggle('translate-x-full');
+            }
+        }
+
+        function checkout() {
+            if (cart.length === 0) return alert("Keranjang kosong!");
+            const name = document.getElementById('customer-name').value;
+            const table = document.getElementById('table-number').value;
+            if (!name || !table) return alert("Isi nama dan nomor meja!");
+
+            let msg = `Halo Cafe Senja, saya mau pesan:%0A%0A*Nama:* ${name}%0A*Meja:* ${table}%0A%0A*Order:*%0A`;
+            let total = 0;
+            cart.forEach(i => {
+                total += i.price * i.qty;
+                msg += `- ${i.name} (${i.qty}x)%0A`;
+            });
+            msg += `%0A*Total: Rp ${total.toLocaleString()}*`;
+
+            // GANTI NOMOR WA DISINI (Format 628...)
+            window.open(`https://wa.me/6285361715788?text=${msg}`, '_blank');
+        }
+
+        renderMenu();
+        
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+</body>
+</html>
